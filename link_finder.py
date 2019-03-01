@@ -4,22 +4,28 @@
 # all of the links that can be found in the html
 # It then categorizes them as working or broken
 # This is heavily inspired by my previous works email_parser.py
-# version 1.0.0 02/28/19
+# version 1.4.0 02/28/19
 
+#imports
 import getopt
 import sys
 from bs4 import BeautifulSoup
 import requests
 import requests.exceptions
 from urllib.parse import urlsplit
+from urllib.parse import urlparse
 from collections import deque
 
-
+#global variables
 foreign_urls = set()
 processed_urls = set()
 broken_urls = set()
 good_urls = set()
+limits = str 
 
+### Main Method
+### This method processes all commandline arguements
+### and sets up all things necessary for performance.
 def main():
     try:
         opts,args = getopt.getopt(sys.argv[1:], "o:l:mh", ["help", "ouput=", "limit="])
@@ -30,7 +36,8 @@ def main():
     outfile = None
     out = False
     working = False
-    limits = None 
+    limited = False
+    limits = ""
     for one, two in opts:
         if one == "-m":
             working = True
@@ -42,11 +49,12 @@ def main():
             out = True
         elif one in ("-l","--limit"):
             limits = two
+            limited = True
         else:
             assert False, "Option not permitted"
 
-    beg_url = input("Enter your target url ")
-    spider(beg_url)
+    beg_url = sys.argv[1]
+    spider(beg_url,limited,limits)
 
     #setup output buffers
     orig_stdout = sys.stdout
@@ -82,19 +90,24 @@ def main():
 ### This method contains all main functionality
 ### This will spider throught the site and map out links as
 ### active or broken!!
-def spider(starter):
-
-    #opening message
-    print('Welcome to link_finder.py')
-
-    #hardcoded website
+def spider(starter,l,limit):
     start = starter
+    data = urlparse(start)
+    domain = str
+    #setup domain information 
+    if l:
+        domain = str(limit)
+        print ("domain with l flag " + str(domain))
+    else:
+        domain = data.netloc
+        print("domain" + str(domain))
 
     # data structures
     new_urls = deque([start])
 
     #main while loop
     while len(new_urls):
+        #pop that boiyo
         url = new_urls.popleft()
         processed_urls.add(url)
 
@@ -110,6 +123,7 @@ def spider(starter):
         try:
             response = requests.get(url)
             good_urls.add(url)
+            #print(url)
         except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError, requests.exceptions.InvalidURL):
             broken_urls.add(url)
             continue
@@ -126,16 +140,15 @@ def spider(starter):
                 link = base_url + link
             elif not link.startswith('http'):
                 link = path + link
-            if not link in new_urls and not link in processed_urls and not link.find(start) == -1:
+            if not link in new_urls and not link in processed_urls and not link.find(domain) == -1:
                 new_urls.append(link)
-            if link.find(start) == -1:
+            if link.find(domain) == -1:
                 foreign_urls.add(link[:75])
 
 def usage():
     print("USAGE: python3 link_finder.py -o <outfile> -m -l <domain to be limi"
             +"ted too>\n")
     sys.exit(2)
-
 
 if __name__ == "__main__":
     main()
