@@ -21,19 +21,19 @@ foreign_urls = set()
 processed_urls = set()
 broken_urls = set()
 good_urls = set()
-limits = str 
 
 ### Main Method
 ### This method processes all commandline arguements
 ### and sets up all things necessary for performance.
 def main():
     try:
-        opts,args = getopt.getopt(sys.argv[1:], "o:l:mh", ["help", "ouput=", "limit="])
+        opts,args=getopt.getopt(sys.argv[2:],"o:l:mh",["help","ouput=","limit="])
     except getopt.GetoptError as err:
         print(err)
         usage()
         sys.exit(2)
-    outfile = None
+
+    outfile = ""
     out = False
     working = False
     limited = False
@@ -44,7 +44,7 @@ def main():
         elif one in ("-h", "--help"):
             usage()
             sys.exit()
-        elif one in ("-o","--output"):
+        elif one in ("-o","--ofile"):
             outfile = two
             out = True
         elif one in ("-l","--limit"):
@@ -58,6 +58,7 @@ def main():
 
     #setup output buffers
     orig_stdout = sys.stdout
+    #print(out)
     if out:
         f = open(outfile, 'w')
         sys.stdout = f
@@ -87,20 +88,25 @@ def main():
         sys.stdout = orig_stdout
         f.close()
 
+### This method gets the base name for the domain
+### makes use of urlparse
+def get_base_domain(url):
+    parsed = urlparse(url)
+    domain = '{uri.netloc}/'.format(uri=parsed)
+    result = domain.replace('www','')
+    d = result
+    return d
+
 ### This method contains all main functionality
 ### This will spider throught the site and map out links as
 ### active or broken!!
 def spider(starter,l,limit):
     start = starter
-    data = urlparse(start)
     domain = str
-    #setup domain information 
     if l:
         domain = str(limit)
-        print ("domain with l flag " + str(domain))
     else:
-        domain = data.netloc
-        print("domain" + str(domain))
+        domain = get_base_domain(start)
 
     # data structures
     new_urls = deque([start])
@@ -123,13 +129,11 @@ def spider(starter,l,limit):
         try:
             response = requests.get(url)
             good_urls.add(url)
-            #print(url)
         except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError, requests.exceptions.InvalidURL):
             broken_urls.add(url)
             continue
-
         #create a BSOBJ to scan the html for links
-        soup = BeautifulSoup(response.text, 'lxml')
+        soup = BeautifulSoup(response.text,'lxml')
 
         #determine which lnks are valid from the html
         for anchor in soup.find_all("a"):
